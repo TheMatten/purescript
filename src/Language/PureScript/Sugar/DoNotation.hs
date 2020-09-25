@@ -10,6 +10,8 @@ import           Prelude.Compat
 import           Control.Applicative ((<|>))
 import           Control.Monad.Error.Class (MonadError(..))
 import           Control.Monad.Supply.Class
+import           Control.Monad.Writer.Strict (tell, lift, WriterT(..))
+import qualified Data.Map.Strict as M
 import           Data.Maybe (fromMaybe)
 import           Data.Monoid (First(..))
 import           Language.PureScript.AST
@@ -17,6 +19,7 @@ import           Language.PureScript.Crash
 import           Language.PureScript.Errors
 import           Language.PureScript.Names
 import qualified Language.PureScript.Constants.Prelude as C
+import           Language.PureScript.PSString (mkString)
 
 -- | Replace all @DoNotationBind@ and @DoNotationValue@ constructors with
 -- applications of the bind function in scope, and all @DoNotationLet@
@@ -36,6 +39,12 @@ desugarDo d =
 
   discard :: SourceSpan -> Maybe ModuleName -> Expr
   discard ss m = Var ss (Qualified m (Ident C.discard))
+
+  fixM :: SourceSpan -> Maybe ModuleName -> Expr
+  fixM ss m = Var ss (Qualified m (Ident C.fixM))
+
+  pure' :: SourceSpan -> Maybe ModuleName -> Expr
+  pure' ss m = Var ss (Qualified m (Ident C.pure'))
 
   replace :: SourceSpan -> Expr -> m Expr
   replace pos (Do m els) = go pos m els
@@ -82,4 +91,32 @@ desugarDo d =
     mapM_ checkBind ds
     rest' <- go pos m rest
     return $ Let FromLet ds rest'
+  go _ _ [DoNotationRec _] = throwError . errorMessage $ InvalidDoRec
+  go pos m (DoNotationRec stmts : rest) = do
+    (newStmts, (origNames, substNames)) <- untieDoRec stmts
+    let inputObj = LiteralBinder pos $ ObjectLiteral $
+          zip (mkString . showIdent <$> origNames) (VarBinder pos <$> origNames)
+        outputObj = zip (mkString . showIdent <$> origNames) (Var pos . Qualified Nothing <$> substNames)
+    fixedStmts <- go pos m $ newStmts ++ [DoNotationValue $ App (pure' pos m) $ Literal pos $ ObjectLiteral outputObj]
+    go pos m $ DoNotationBind inputObj (App (fixM pos m) $ Abs inputObj fixedStmts) : rest
+
   go _ m (PositionedDoNotationElement pos com el : rest) = rethrowWithPosition pos $ PositionedValue pos com <$> go pos m (el : rest)
+
+  untieDoRec :: [DoNotationElement] -> m ([DoNotationElement], ([Ident], [Ident]))
+  untieDoRec = runWriterT . traverse untie where
+    untie = \case
+      DoNotationBind b e -> do
+        let origNames = binderNames b
+        substNames <- traverse (fmap lift freshIdent . showIdent) origNames
+        tell (origNames, substNames)
+        pure $ DoNotationBind (renameBinderNames (M.fromList $ zip origNames substNames) b) e
+      PositionedDoNotationElement pos com el -> PositionedDoNotationElement pos com <$> untie el
+      s -> pure s
+    renameBinderNames m = onBinder where
+      (_, _, onBinder) = everywhereOnValues id id $ \case
+        NamedBinder ss i b ->
+          NamedBinder ss (substitute m i) b
+        VarBinder ss i ->
+          VarBinder ss $ substitute m i
+        s -> s
+      substitute ss i = fromMaybe i $ M.lookup i ss

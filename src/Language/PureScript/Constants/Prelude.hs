@@ -39,6 +39,9 @@ bind = "bind"
 discard :: forall a. (IsString a) => a
 discard = "discard"
 
+fixM :: forall a. (IsString a) => a
+fixM = "fixM"
+
 pattern Discard :: Qualified (ProperName 'ClassName)
 pattern Discard = Qualified (Just ControlBind) (ProperName "Discard")
 

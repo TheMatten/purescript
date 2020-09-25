@@ -244,6 +244,9 @@ convertExpr fileName = go
         a' = convertBinder fileName a
         b' = go b
       uncurry AST.PositionedDoNotationElement ann $ AST.DoNotationBind a' b'
+    stmt@(DoRec _ as) -> do
+      let ann = uncurry (sourceAnnCommented fileName) $ doStatementRange stmt
+      uncurry AST.PositionedDoNotationElement ann $ AST.DoNotationRec $ goDoStatement <$> NE.toList as
 
   go = \case
     ExprHole _ a ->

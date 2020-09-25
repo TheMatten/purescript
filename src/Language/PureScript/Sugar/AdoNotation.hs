@@ -60,6 +60,7 @@ desugarAdo d =
     return (abs, val : args)
   go _ (yield, args) (DoNotationLet ds) = do
     return (Let FromLet ds yield, args)
+  go _ _ (DoNotationRec _) = throwError . errorMessage $ InvalidADoRec
   go _ acc (PositionedDoNotationElement pos com el) =
     rethrowWithPosition pos $ do
       (yield, args) <- go pos acc el

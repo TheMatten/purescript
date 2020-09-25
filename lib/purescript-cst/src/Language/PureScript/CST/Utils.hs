@@ -351,6 +351,7 @@ reservedNames = Set.fromList
   , "module"
   , "newtype"
   , "of"
+  , "rec"
   , "true"
   , "type"
   , "where"

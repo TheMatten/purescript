@@ -413,6 +413,7 @@ data DoStatement a
   = DoLet SourceToken (NonEmpty (LetBinding a))
   | DoDiscard (Expr a)
   | DoBind (Binder a) SourceToken (Expr a)
+  | DoRec SourceToken (NonEmpty (DoStatement a))
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
 
 data AdoBlock a = AdoBlock

@@ -812,6 +812,9 @@ data DoNotationElement
   --
   | DoNotationLet [Declaration]
   -- |
+  -- A rec block; that is, block with possibly recursive bindings
+  | DoNotationRec [DoNotationElement]
+  -- |
   -- A do notation element with source position information
   --
   | PositionedDoNotationElement SourceSpan [Comment] DoNotationElement

@@ -313,6 +313,7 @@ doStatementRange = \case
   DoLet a bs -> (a, snd . letBindingRange $ NE.last bs)
   DoDiscard a -> exprRange a
   DoBind a _ b -> (fst $ binderRange a, snd $ exprRange b)
+  DoRec a b -> (a, snd . doStatementRange $ NE.last b)
 
 binderRange :: Binder a -> TokenRange
 binderRange = \case

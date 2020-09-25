@@ -21,6 +21,7 @@ import Language.PureScript.Names
 import Language.PureScript.Traversals
 import Language.PureScript.TypeClassDictionaries (TypeClassDictionaryInScope(..))
 import Language.PureScript.Types
+import Data.Bifunctor (Bifunctor(..))
 
 guardedExprM :: Applicative m
              => (Guard -> m Guard)
@@ -105,10 +106,12 @@ everywhereOnValues f g h = (f', g', h')
        }
 
   handleDoNotationElement :: DoNotationElement -> DoNotationElement
-  handleDoNotationElement (DoNotationValue v) = DoNotationValue (g' v)
-  handleDoNotationElement (DoNotationBind b v) = DoNotationBind (h' b) (g' v)
-  handleDoNotationElement (DoNotationLet ds) = DoNotationLet (fmap f' ds)
-  handleDoNotationElement (PositionedDoNotationElement pos com e) = PositionedDoNotationElement pos com (handleDoNotationElement e)
+  handleDoNotationElement = \case
+    DoNotationValue v -> DoNotationValue (g' v)
+    DoNotationBind b v -> DoNotationBind (h' b) (g' v)
+    DoNotationLet ds -> DoNotationLet (fmap f' ds)
+    DoNotationRec ss -> DoNotationRec (fmap handleDoNotationElement ss)
+    PositionedDoNotationElement pos com e -> PositionedDoNotationElement pos com (handleDoNotationElement e)
 
   handleGuard :: Guard -> Guard
   handleGuard (ConditionGuard e) = ConditionGuard (g' e)
@@ -175,10 +178,12 @@ everywhereOnValuesTopDownM f g h = (f' <=< f, g' <=< g, h' <=< h)
       <*> traverse (guardedExprM handleGuard (g' <=< g)) val
 
   handleDoNotationElement :: DoNotationElement -> m DoNotationElement
-  handleDoNotationElement (DoNotationValue v) = DoNotationValue <$> (g' <=< g) v
-  handleDoNotationElement (DoNotationBind b v) = DoNotationBind <$> (h' <=< h) b <*> (g' <=< g) v
-  handleDoNotationElement (DoNotationLet ds) = DoNotationLet <$> traverse (f' <=< f) ds
-  handleDoNotationElement (PositionedDoNotationElement pos com e) = PositionedDoNotationElement pos com <$> handleDoNotationElement e
+  handleDoNotationElement = \case
+    DoNotationValue v -> DoNotationValue <$> (g' <=< g) v
+    DoNotationBind b v -> DoNotationBind <$> (h' <=< h) b <*> (g' <=< g) v
+    DoNotationLet ds -> DoNotationLet <$> traverse (f' <=< f) ds
+    DoNotationRec ss -> DoNotationRec <$> traverse handleDoNotationElement ss
+    PositionedDoNotationElement pos com e -> PositionedDoNotationElement pos com <$> handleDoNotationElement e
 
   handleGuard :: Guard -> m Guard
   handleGuard (ConditionGuard e) = ConditionGuard <$> (g' <=< g) e
@@ -245,10 +250,12 @@ everywhereOnValuesM f g h = (f', g', h')
       <*> traverse (guardedExprM handleGuard g') val
 
   handleDoNotationElement :: DoNotationElement -> m DoNotationElement
-  handleDoNotationElement (DoNotationValue v) = DoNotationValue <$> g' v
-  handleDoNotationElement (DoNotationBind b v) = DoNotationBind <$> h' b <*> g' v
-  handleDoNotationElement (DoNotationLet ds) = DoNotationLet <$> traverse f' ds
-  handleDoNotationElement (PositionedDoNotationElement pos com e) = PositionedDoNotationElement pos com <$> handleDoNotationElement e
+  handleDoNotationElement = \case
+    DoNotationValue v -> DoNotationValue <$> g' v
+    DoNotationBind b v -> DoNotationBind <$> h' b <*> g' v
+    DoNotationLet ds -> DoNotationLet <$> traverse f' ds
+    DoNotationRec ss -> DoNotationRec <$> traverse handleDoNotationElement ss
+    PositionedDoNotationElement pos com e -> PositionedDoNotationElement pos com <$> handleDoNotationElement e
 
   handleGuard :: Guard -> m Guard
   handleGuard (ConditionGuard e) = ConditionGuard <$> g' e
@@ -324,6 +331,7 @@ everythingOnValues (<>.) f g h i j = (f', g', h', i', j')
   j' e@(DoNotationValue v) = j e <>. g' v
   j' e@(DoNotationBind b v) = j e <>. h' b <>. g' v
   j' e@(DoNotationLet ds) = foldl (<>.) (j e) (fmap f' ds)
+  j' e@(DoNotationRec ss) = foldl (<>.) (j e) (fmap j' ss)
   j' e@(PositionedDoNotationElement _ _ e1) = j e <>. j' e1
 
   k' :: Guard -> r
@@ -414,6 +422,7 @@ everythingWithContextOnValues s0 r0 (<>.) f g h i j = (f'' s0, g'' s0, h'' s0, i
   j' s (DoNotationValue v) = g'' s v
   j' s (DoNotationBind b v) = h'' s b <>. g'' s v
   j' s (DoNotationLet ds) = foldl (<>.) r0 (fmap (f'' s) ds)
+  j' s (DoNotationRec ss) = foldl (<>.) r0 (fmap (j' s) ss)
   j' s (PositionedDoNotationElement _ _ e1) = j'' s e1
 
   k' :: s -> Guard -> r
@@ -494,6 +503,7 @@ everywhereWithContextOnValuesM s0 f g h i j = (f'' s0, g'' s0, h'' s0, i'' s0, j
   j' s (DoNotationValue v) = DoNotationValue <$> g'' s v
   j' s (DoNotationBind b v) = DoNotationBind <$> h'' s b <*> g'' s v
   j' s (DoNotationLet ds) = DoNotationLet <$> traverse (f'' s) ds
+  j' s (DoNotationRec ss) = DoNotationRec <$> traverse (j' s) ss
   j' s (PositionedDoNotationElement pos com e1) = PositionedDoNotationElement pos com <$> j'' s e1
 
   k' s (ConditionGuard e) = ConditionGuard <$> g'' s e
@@ -606,6 +616,7 @@ everythingWithScope f g h i j = (f'', g'', h'', i'', \s -> snd . j'' s)
   j' s (DoNotationLet ds) =
     let s' = S.union s (S.fromList (map LocalIdent (mapMaybe getDeclIdent ds)))
     in (s', foldMap (f'' s') ds)
+  j' s (DoNotationRec ds) = second fold (mapAccumL j'' s ds)
   j' s (PositionedDoNotationElement _ _ e1) = j'' s e1
 
   k' :: S.Set ScopedIdent -> Guard -> (S.Set ScopedIdent, r)

@@ -188,6 +188,9 @@ prettyPrintDoNotationElement d (DoNotationBind binder val) =
 prettyPrintDoNotationElement d (DoNotationLet ds) =
   text "let" //
     moveRight 2 (vcat left (map (prettyPrintDeclaration (d - 1)) ds))
+prettyPrintDoNotationElement d (DoNotationRec ss) =
+  text "rec" //
+    moveRight 2 (vcat left (map (prettyPrintDoNotationElement (d - 1)) ss))
 prettyPrintDoNotationElement d (PositionedDoNotationElement _ _ el) = prettyPrintDoNotationElement d el
 
 prettyPrintBinderAtom :: Binder -> Text

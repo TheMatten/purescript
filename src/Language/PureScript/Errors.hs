@@ -89,6 +89,8 @@ data SimpleErrorMessage
   | DuplicateTypeArgument Text
   | InvalidDoBind
   | InvalidDoLet
+  | InvalidDoRec
+  | InvalidADoRec
   | CycleInDeclaration Ident
   | CycleInTypeSynonym (Maybe (ProperName 'TypeName))
   | CycleInTypeClassDeclaration [Qualified (ProperName 'ClassName)]
@@ -254,6 +256,8 @@ errorCode em = case unwrapErrorMessage em of
   DuplicateTypeArgument{} -> "DuplicateTypeArgument"
   InvalidDoBind -> "InvalidDoBind"
   InvalidDoLet -> "InvalidDoLet"
+  InvalidDoRec -> "InvalidDoRec"
+  InvalidADoRec -> "InvalidADoRec"
   CycleInDeclaration{} -> "CycleInDeclaration"
   CycleInTypeSynonym{} -> "CycleInTypeSynonym"
   CycleInTypeClassDeclaration{} -> "CycleInTypeClassDeclaration"
@@ -693,6 +697,10 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
       line "The last statement in a 'do' block must be an expression, but this block ends with a binder."
     renderSimpleErrorMessage InvalidDoLet =
       line "The last statement in a 'do' block must be an expression, but this block ends with a let binding."
+    renderSimpleErrorMessage InvalidDoRec =
+      line "The last statement in a 'do' block must be an expression, but this block ends with a rec block."
+    renderSimpleErrorMessage InvalidADoRec =
+      line "A rec block cannot is not allowed inside of an ado block."
     renderSimpleErrorMessage OverlappingNamesInLet =
       line "The same name was used more than once in a let binding."
     renderSimpleErrorMessage (InfiniteType ty) =
@@ -713,7 +721,7 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
       line $ "The kind declaration for " <> markCode (runProperName nm) <> " should be followed by its definition."
     renderSimpleErrorMessage (RedefinedIdent name) =
       line $ "The value " <> markCode (showIdent name) <> " has been defined multiple times"
-    renderSimpleErrorMessage (UnknownName name@(Qualified Nothing (IdentName (Ident i)))) | i `elem` [ C.bind, C.discard ] =
+    renderSimpleErrorMessage (UnknownName name@(Qualified Nothing (IdentName (Ident i)))) | i `elem` [ C.bind, C.discard, C.fixM, C.pure' ] =
       line $ "Unknown " <> printName name <> ". You're probably using do-notation, which the compiler replaces with calls to the " <> markCode i <> " function. Please import " <> markCode i <> " from module " <> markCode "Prelude"
     renderSimpleErrorMessage (UnknownName name) =
       line $ "Unknown " <> printName name

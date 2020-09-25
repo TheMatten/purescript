@@ -52,6 +52,7 @@ data LayoutDelim
   | LytWhere
   | LytOf
   | LytDo
+  | LytRec
   | LytAdo
   deriving (Show, Eq, Ord)
 
@@ -62,6 +63,7 @@ isIndented = \case
   LytWhere   -> True
   LytOf      -> True
   LytDo      -> True
+  LytRec     -> True
   LytAdo     -> True
   _          -> False
 
@@ -151,6 +153,8 @@ insertLayout src@(SourceToken tokAnn tok) nextPos stack =
       next state'@(stk', _) = case stk' of
         (p, LytDo) : _ | srcColumn p == srcColumn tokPos ->
           state' & insertStart LytLetStmt
+        (p, LytRec) : _ | srcColumn p == srcColumn tokPos ->
+          state' & insertStart LytLetStmt
         (p, LytAdo) : _ | srcColumn p == srcColumn tokPos ->
           state' & insertStart LytLetStmt
         _ ->
@@ -158,6 +162,9 @@ insertLayout src@(SourceToken tokAnn tok) nextPos stack =
 
     TokLowerName _ "do" ->
       state & insertKwProperty (insertStart LytDo)
+
+    TokLowerName _ "rec" ->
+      state & insertKwProperty (insertStart LytRec)
 
     TokLowerName _ "ado" ->
       state & insertKwProperty (insertStart LytAdo)

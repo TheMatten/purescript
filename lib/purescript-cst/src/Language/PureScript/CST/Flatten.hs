@@ -129,6 +129,7 @@ flattenDoStatement = \case
   DoLet a b -> pure a <> foldMap flattenLetBinding b
   DoDiscard a -> flattenExpr a
   DoBind a b c -> flattenBinder a <> pure b <> flattenExpr c
+  DoRec a b -> pure a <> foldMap flattenDoStatement b
 
 flattenExpr :: Expr a -> DList SourceToken
 flattenExpr = \case

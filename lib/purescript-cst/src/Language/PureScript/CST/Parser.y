@@ -118,6 +118,7 @@ import Language.PureScript.PSString (PSString)
   'nominal'          { SourceToken _ (TokLowerName [] "nominal") }
   'phantom'          { SourceToken _ (TokLowerName [] "phantom") }
   'of'               { SourceToken _ (TokLowerName [] "of") }
+  'rec'              { SourceToken _ (TokLowerName [] "rec") }
   'representational' { SourceToken _ (TokLowerName [] "representational") }
   'role'             { SourceToken _ (TokLowerName [] "role") }
   'then'             { SourceToken _ (TokLowerName [] "then") }
@@ -521,6 +522,12 @@ adoBlock :: { (SourceToken, [DoStatement ()]) }
 doStatement :: { [DoStatement ()] }
   : 'let' '\{' manySep(letBinding, '\;') '\}'
       {%^ revert $ fmap (DoLet $1 $3 :) parseDoNext }
+  | 'rec' '\{'
+      {%^ revert $ do
+        res <- parseDoStatement
+        when (null res) $ addFailure [$2] ErrEmptyDo
+        fmap (DoRec $1 (NE.fromList res) :) parseDoNext
+      }
   | {- empty -}
       {%^ revert $ do
         stmt <- tryPrefix parseBinderAndArrow parseDoExpr
