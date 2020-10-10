@@ -38,18 +38,18 @@ extra-source-files:
   - CONTRIBUTORS.md
   - CONTRIBUTING.md
 dependencies:
-  - aeson >=1.0 && <1.5
+  - aeson >=1.0 && <1.6
   - aeson-better-errors >=0.8
   - aeson-pretty
-  - ansi-terminal >=0.7.1 && <0.9
+  - ansi-terminal >=0.7.1 && <0.12
   - array
-  - base >=4.11 && <4.13
+  - base >=4.11 && <4.14
   - base-compat >=0.6.0
   - blaze-html >=0.8.1 && <0.10
   - bower-json >=1.0.0.1 && <1.1
   - boxes >=0.1.4 && <0.2.0
   - bytestring
-  - Cabal >= 2.2 && <3.0
+  - Cabal >= 2.2 && <3.5
   - cborg
   - serialise
   - cheapskate >=0.1 && <0.2
@@ -68,8 +68,8 @@ dependencies:
   - language-javascript ==0.7.0.0 # important: keep this pinned to a single specific version, since it's effectively part of the compiler's public API.
   - lifted-async >=0.10.0.3 && <0.10.1
   - lifted-base >=0.2.3 && <0.2.4
-  - memory >=0.14 && <0.15
-  - microlens-platform >=0.3.9.0 && <0.4
+  - memory >=0.14 && <0.16
+  - microlens-platform >=0.3.9.0 && <0.4.2
   - monad-control >=1.0.0.0 && <1.1
   - monad-logger >=0.3 && <0.4
   - mtl >=2.1.0 && <2.3.0
@@ -77,7 +77,7 @@ dependencies:
   - parsec >=3.1.10
   - pattern-arrows >=0.0.2 && <0.1
   - process >=1.2.0 && <1.7
-  - protolude >=0.1.6 && <0.2.4
+  - protolude >=0.1.6 && <3
   - purescript-ast
   - purescript-cst
   - regex-tdfa
@@ -99,7 +99,7 @@ dependencies:
   - utf8-string >=1 && <2
   - vector
 build-tools:
-  - happy ==1.19.9
+  - happy ==1.20.0
 
 library:
   source-dirs: src
